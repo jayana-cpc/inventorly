@@ -25,7 +25,11 @@ conn = psycopg2.connect(
 def insert_image_embedding(filename, file_path, embedding):
     embedding = embedding.tolist() 
     cur = conn.cursor()
-    cur.execute("INSERT INTO image_embeddings (filename, file_path, embedding) VALUES(%s, %s, %s)", (filename, file_path, embedding))
+    cur.execute(
+    """
+    INSERT INTO image_embeddings (filename, file_path, embedding) VALUES(%s, %s, %s)", (filename, file_path, embedding))
+    """
+    )
     conn.commit()
     cur.close()
 
@@ -53,9 +57,37 @@ def upload_image(file_bytes, filename):
     url = f"https://{bucket}.s3.{os.getenv('AWS_S3_REGION')}.amazonaws.com/{filename}"
     return url
 
+def search_image(embedding, top_k=1):
+    cur = conn.cursor()
+    embedding = embedding.tolist()
+    cur.execute(
+    """
+    SELECT id, filename, file_path, embedding, created_at
+    FROM image_embeddings
+    ORDER BY embedding <=> %s::vector
+    LIMIT %s;
+    """,
+    (embedding, top_k)
+    )
+    rows = cur.fetchall()
+    cur.close()
+    return [
+        {
+            "id": row[0],
+            "filename": row[1],
+            "file_path": row[2],
+            "created_at": row[4]
+        }
+        for row in rows
+    ]
+
 def view_db():
     cur = conn.cursor()
-    cur.execute("SELECT * FROM image_embeddings;")
+    cur.execute(
+    """
+    SELECT * FROM image_embeddings;
+    """
+    )
     rows = cur.fetchall()
     for row in rows:
         print(row)
