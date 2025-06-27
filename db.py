@@ -1,7 +1,11 @@
 import psycopg2
 import os
+import io
 from dotenv import load_dotenv
-
+from PIL import Image
+import requests
+import torch
+from transformers import CLIPProcessor, CLIPModel
 load_dotenv()
 
 DB_HOST = os.getenv("DB_HOST", "localhost")
@@ -24,6 +28,17 @@ def insert_image_embedding(filename, file_path, embedding):
     conn.commit()
     cur.close()
 
+def create_embedding(image):
+    image = Image.open(io.BytesIO(image)).convert("RGB")
+    model = CLIPModel.from_pretrained("openai/clip-vit-base-patch16")
+    processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch16")
+
+    inputs = processor(images=image, return_tensors="pt") # type: ignore
+    with torch.no_grad():
+        outputs = model.get_image_features(pixel_values=inputs["pixel_values"]) # type: ignore
+        embedding = outputs[0].cpu().numpy()
+    
+    return embedding
 
 conn.close()
 
