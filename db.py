@@ -3,6 +3,7 @@ import os
 import io
 from dotenv import load_dotenv
 from PIL import Image
+import boto3
 import requests
 import torch
 from transformers import CLIPProcessor, CLIPModel
@@ -39,6 +40,18 @@ def create_embedding(image):
         embedding = outputs[0].cpu().numpy()
     
     return embedding
+
+def upload_image(file_bytes, filename):
+    s3 = boto3.client(
+        "s3",
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        region_name=os.getenv("AWS_S3_REGION")
+    )
+    bucket = os.getenv("AWS_S3_BUCKET")
+    s3.upload_fileobj(io.BytesIO(file_bytes), bucket, filename)
+    url = f"https://{bucket}.s3.{os.getenv('AWS_S3_REGION')}.amazonaws.com/{filename}"
+    return url
 
 conn.close()
 
