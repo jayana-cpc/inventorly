@@ -1,6 +1,6 @@
 from fastapi import FastAPI, File, UploadFile
 from typing import Optional
-from db import create_embedding, insert_image_embedding, upload_image
+from db import create_embedding, insert_image_embedding, upload_image, view_db
 
 app = FastAPI()
 
@@ -12,7 +12,8 @@ def home():
 async def create_upload_file(file: UploadFile = File(...)):
     content = await file.read()
     size_mb = len(content) / (1024 * 1024)
-    print(upload_image(content, file.filename))
-    # embedding = create_embedding(content)
-    # insert_image_embedding(file.filename, file.filename, embedding)
+    url = upload_image(content, file.filename)
+    embedding = create_embedding(content)
+    insert_image_embedding(file.filename, url, embedding)
+    view_db()
     return {"filename": file.filename, "size_mb": round(size_mb, 2)}

@@ -53,7 +53,18 @@ def upload_image(file_bytes, filename):
     url = f"https://{bucket}.s3.{os.getenv('AWS_S3_REGION')}.amazonaws.com/{filename}"
     return url
 
-conn.close()
+def view_db():
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM image_embeddings;")
+    rows = cur.fetchall()
+    for row in rows:
+        print(row)
+    cur.close()
+
+def close_db():
+    conn.close()
+
+
 
 
 
