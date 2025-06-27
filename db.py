@@ -96,11 +96,6 @@ def view_db():
 def close_db():
     conn.close()
 
-
-
-
-
-
 """
 Created table for immage embeddings
 

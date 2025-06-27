@@ -1,5 +1,4 @@
 from fastapi import FastAPI, File, UploadFile
-from typing import Optional
 from db import create_embedding, insert_image_embedding, upload_image, view_db, close_db, search_image
 
 app = FastAPI()
