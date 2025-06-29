@@ -14,24 +14,29 @@ DB_NAME = os.getenv("DB_NAME", "postgres")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 
-conn = psycopg2.connect(
+def get_db_connection():
+    return psycopg2.connect(
     host=DB_HOST,
     database=DB_NAME,
     user=DB_USER,
     password=DB_PASSWORD,
     port=5432
-)
+    )
 
 def insert_image_embedding(filename, file_path, embedding):
+    conn = get_db_connection()
     embedding = embedding.tolist() 
     cur = conn.cursor()
-    cur.execute(
-    """
-    INSERT INTO image_embeddings (filename, file_path, embedding) VALUES(%s, %s, %s)", (filename, file_path, embedding))
-    """
-    )
-    conn.commit()
-    cur.close()
+    try:
+        cur.execute(
+        """
+        INSERT INTO image_embeddings (filename, file_path, embedding) VALUES(%s, %s, %s)", (filename, file_path, embedding))
+        """
+        )
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
 
 def create_embedding(image):
     image = Image.open(io.BytesIO(image)).convert("RGB")
@@ -58,43 +63,51 @@ def upload_image(file_bytes, filename):
     return url
 
 def search_image(embedding, top_k=1):
+    conn = get_db_connection()
     cur = conn.cursor()
     embedding = embedding.tolist()
-    cur.execute(
-    """
-    SELECT id, filename, file_path, embedding, created_at
-    FROM image_embeddings
-    ORDER BY embedding <=> %s::vector
-    LIMIT %s;
-    """,
-    (embedding, top_k)
-    )
-    rows = cur.fetchall()
-    cur.close()
-    return [
-        {
-            "id": row[0],
-            "filename": row[1],
-            "file_path": row[2],
-            "created_at": row[4]
-        }
-        for row in rows
-    ]
+    try:
+        cur.execute(
+        """
+        SELECT id, filename, file_path, embedding, created_at
+        FROM image_embeddings
+        ORDER BY embedding <=> %s::vector
+        LIMIT %s;
+        """,
+        (embedding, top_k)
+        )
+        rows = cur.fetchall()
+        return [
+            {
+                "id": row[0],
+                "filename": row[1],
+                "file_path": row[2],
+                "created_at": row[4]
+            }
+            for row in rows
+        ]
+    finally:
+        cur.close()
+        conn.close()
+
 
 def view_db():
+    conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(
-    """
-    SELECT * FROM image_embeddings;
-    """
-    )
-    rows = cur.fetchall()
-    for row in rows:
-        print(row)
-    cur.close()
+    try:
+        cur.execute(
+        """
+        SELECT * FROM image_embeddings;
+        """
+        )
+        rows = cur.fetchall()
+        for row in rows:
+            print(row)
+    finally:
+        cur.close()
+        conn.close()
 
-def close_db():
-    conn.close()
+
 
 """
 Created table for immage embeddings
