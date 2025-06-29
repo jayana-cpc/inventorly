@@ -23,16 +23,16 @@ def get_db_connection():
     port=5432
     )
 
-def insert_image_embedding(filename, file_path, embedding):
+def insert_image_embedding(filename, file_path, embedding, description):
     conn = get_db_connection()
     embedding = embedding.tolist() 
     cur = conn.cursor()
     try:
         cur.execute(
             """
-            INSERT INTO image_embeddings (filename, file_path, embedding) VALUES(%s, %s, %s)
+            INSERT INTO image_embeddings (filename, file_path, embedding, description) VALUES(%s, %s, %s, %s)
             """, 
-            (filename, file_path, embedding)
+            (filename, file_path, embedding, description)
         )
         conn.commit()
     finally:
