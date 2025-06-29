@@ -29,9 +29,10 @@ def insert_image_embedding(filename, file_path, embedding):
     cur = conn.cursor()
     try:
         cur.execute(
-        """
-        INSERT INTO image_embeddings (filename, file_path, embedding) VALUES(%s, %s, %s)", (filename, file_path, embedding))
-        """
+            """
+            INSERT INTO image_embeddings (filename, file_path, embedding) VALUES(%s, %s, %s)
+            """, 
+            (filename, file_path, embedding)
         )
         conn.commit()
     finally:
@@ -114,9 +115,10 @@ Created table for immage embeddings
 
 CREATE TABLE IF NOT EXISTS image_embeddings (
     id SERIAL PRIMARY KEY,
-    filename VARCHAR(255) NOT NULL,
-    file_path VARCHAR(500) NOT NULL,
+    image_name VARCHAR(255) NOT NULL,
+    image_url VARCHAR(1000) NOT NULL UNIQUE,
     embedding vector(512),
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 """
