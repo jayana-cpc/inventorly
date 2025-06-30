@@ -1,11 +1,33 @@
 from fastapi import FastAPI, File, UploadFile, Form
 from db import create_embedding, insert_image_embedding, upload_image, view_db, search_image
-
+from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi.responses import RedirectResponse
+import requests
+import os
+from jose import jwt
 app = FastAPI()
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")  
+
 
 @app.get("/")
 def home():
-    return {"message": "Hello, World!"}
+    return {"message": "Welcome to Inventorly"}
+
+@app.get("/login")
+def login():
+    google_auth_url = (
+        "https://accounts.google.com/o/oauth2/v2/auth"
+        "?response_type=code"
+        f"&client_id={GOOGLE_CLIENT_ID}"
+        f"&redirect_uri={GOOGLE_REDIRECT_URI}"
+        "&scope=openid%20email%20profile"
+        "&access_type=offline"
+        "&prompt=consent"
+    )
+    return RedirectResponse(google_auth_url)
 
 @app.post("/upload")
 async def create_upload_file(file: UploadFile = File(...), description: str = Form(...)):
