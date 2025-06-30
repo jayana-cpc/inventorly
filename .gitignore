@@ -1,2 +1,4 @@
 .env
 __pycache__/
+task-definition.json
+ECS_DEPLOYMENT_REPORT.md

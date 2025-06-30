@@ -26,8 +26,8 @@ async def query(file: UploadFile = File(...)):
 
 @app.post("/view")
 async def print_db():
-    view_db()
-    return {"message": "Database viewed"}
+    result = view_db()
+    return {"message": result}
 
 
 

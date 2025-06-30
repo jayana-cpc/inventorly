@@ -23,18 +23,21 @@ def get_db_connection():
     port=5432
     )
 
-def insert_image_embedding(filename, file_path, embedding, description):
+def insert_image_embedding(image_name, image_url, embedding, description):
     conn = get_db_connection()
     embedding = embedding.tolist() 
     cur = conn.cursor()
     try:
         cur.execute(
             """
-            INSERT INTO image_embeddings (filename, file_path, embedding, description) VALUES(%s, %s, %s, %s)
+            INSERT INTO image_embeddings (image_name, image_url, embedding, description) VALUES(%s, %s, %s, %s)
             """, 
-            (filename, file_path, embedding, description)
+            (image_name, image_url, embedding, description)
         )
         conn.commit()
+    except Exception as e:
+        print("Error inserting image embedding:", e, flush=True)
+        raise
     finally:
         cur.close()
         conn.close()
@@ -70,7 +73,7 @@ def search_image(embedding, top_k=1):
     try:
         cur.execute(
         """
-        SELECT id, filename, file_path, embedding, created_at
+        SELECT id, image_name, image_url, embedding, description, created_at
         FROM image_embeddings
         ORDER BY embedding <=> %s::vector
         LIMIT %s;
@@ -102,8 +105,10 @@ def view_db():
         """
         )
         rows = cur.fetchall()
+        result = ""
         for row in rows:
-            print(row)
+            result += f"ID: {row[0]}, Image Name: {row[1]}, Image URL: {row[2]}, Description: {row[4]}, Created At: {row[5]}\n"
+        return result
     finally:
         cur.close()
         conn.close()
