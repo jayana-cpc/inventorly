@@ -6,8 +6,18 @@ import requests
 import os
 from jose import jwt
 from typing import Optional
-app = FastAPI()
+from fastapi.middleware.cors import CORSMiddleware
 
+
+
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")  
@@ -52,7 +62,7 @@ def auth_callback(request: Request, response: Response, code: Optional[str] = No
     id_info = jwt.get_unverified_claims(id_token)
     user_email = id_info["email"]
 
-    resp = RedirectResponse(url="/")
+    resp = RedirectResponse(url=f"http://localhost:3000/signin/callback?id_token={id_token}")    
     resp.set_cookie(key="user_email", value=user_email, httponly=True, secure=True)
     return resp
 
@@ -71,10 +81,10 @@ async def create_upload_file(file: UploadFile = File(...), description: str = Fo
     return {"filename": file.filename, "size_mb": round(size_mb, 2)}
 
 @app.post("/search")
-async def query(file: UploadFile = File(...)):
+async def query(file: UploadFile = File(...), user_email: str = Depends(get_current_user)):
     content = await file.read()
     embedding = create_embedding(content)
-    results = search_image(embedding)
+    results = search_image(embedding, user_email=user_email)
     print(results)
     return {"results": results}
 

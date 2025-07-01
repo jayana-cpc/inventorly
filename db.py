@@ -68,7 +68,7 @@ def upload_image(file_bytes, filename):
     url = f"https://{bucket}.s3.{os.getenv('AWS_S3_REGION')}.amazonaws.com/{filename}"
     return url
 
-def search_image(embedding, top_k=1):
+def search_image(embedding, top_k=1, user_email=None):
     conn = get_db_connection()
     cur = conn.cursor()
     embedding = embedding.tolist()
@@ -77,10 +77,11 @@ def search_image(embedding, top_k=1):
         """
         SELECT id, image_name, image_url, embedding, description, created_at
         FROM image_embeddings
+        WHERE user_email = %s
         ORDER BY embedding <=> %s::vector
         LIMIT %s;
         """,
-        (embedding, top_k)
+        (user_email,embedding, top_k)
         )
         rows = cur.fetchall()
         return [
