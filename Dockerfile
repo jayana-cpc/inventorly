@@ -8,6 +8,6 @@ RUN apt-get update && apt-get install -y gcc g++ libpq-dev && pip install --no-c
 
 COPY . .
 
-EXPOSE 8000
+EXPOSE 80
 
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--log-level", "debug"]
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "80", "--log-level", "debug"]

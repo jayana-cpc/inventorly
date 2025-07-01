@@ -23,16 +23,18 @@ def get_db_connection():
     port=5432
     )
 
-def insert_image_embedding(image_name, image_url, embedding, description):
+
+
+def insert_image_embedding(image_name, image_url, embedding, description, user_email):
     conn = get_db_connection()
     embedding = embedding.tolist() 
     cur = conn.cursor()
     try:
         cur.execute(
             """
-            INSERT INTO image_embeddings (image_name, image_url, embedding, description) VALUES(%s, %s, %s, %s)
+            INSERT INTO image_embeddings (image_name, image_url, embedding, description, user_email) VALUES(%s, %s, %s, %s, %s)
             """, 
-            (image_name, image_url, embedding, description)
+            (image_name, image_url, embedding, description, user_email)
         )
         conn.commit()
     except Exception as e:

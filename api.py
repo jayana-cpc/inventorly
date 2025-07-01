@@ -1,10 +1,11 @@
 from fastapi import FastAPI, File, UploadFile, Form
 from db import create_embedding, insert_image_embedding, upload_image, view_db, search_image
-from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi import FastAPI, Request, Response, HTTPException, Cookie, Depends
 from fastapi.responses import RedirectResponse
 import requests
 import os
 from jose import jwt
+from typing import Optional
 app = FastAPI()
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
@@ -29,13 +30,44 @@ def login():
     )
     return RedirectResponse(google_auth_url)
 
+@app.get("/auth/callback")
+def auth_callback(request: Request, response: Response, code: Optional[str] = None):
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing code in callback")
+
+    token_url = "https://oauth2.googleapis.com/token"
+    data = {
+        "code": code,
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "grant_type": "authorization_code",
+    }
+    r = requests.post(token_url, data=data)
+    if not r.ok:
+        raise HTTPException(status_code=400, detail="Failed to get token from Google")
+    tokens = r.json()
+    id_token = tokens["id_token"]
+
+    id_info = jwt.get_unverified_claims(id_token)
+    user_email = id_info["email"]
+
+    resp = RedirectResponse(url="/")
+    resp.set_cookie(key="user_email", value=user_email, httponly=True, secure=True)
+    return resp
+
+def get_current_user(user_email: str = Cookie(None)):
+    if not user_email:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user_email
+
 @app.post("/upload")
-async def create_upload_file(file: UploadFile = File(...), description: str = Form(...)):
+async def create_upload_file(file: UploadFile = File(...), description: str = Form(...), user_email: str = Depends(get_current_user)):
     content = await file.read()
     size_mb = len(content) / (1024 * 1024)
     url = upload_image(content, file.filename)
     embedding = create_embedding(content)
-    insert_image_embedding(file.filename, url, embedding, description)
+    insert_image_embedding(file.filename, url, embedding, description, user_email)
     return {"filename": file.filename, "size_mb": round(size_mb, 2)}
 
 @app.post("/search")
