@@ -8,9 +8,9 @@ from jose import jwt
 from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 
-
-
 app = FastAPI()
+
+# Dealing with CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -18,15 +18,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Google OAuth2 Configuration
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")  
-
-
+# GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")  
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI_DEV") 
+ 
+# Home Route
 @app.get("/")
 def home():
     return {"message": "Welcome to Inventorly"}
 
+"""
+This route is used to redirect the user to the Google OAuth2 login page.
+It is used to get the user's email and password from Google.
+The frontend will redirect the user to this route when the user clicks the login button.
+"""
 @app.get("/login")
 def login():
     google_auth_url = (
@@ -40,6 +48,11 @@ def login():
     )
     return RedirectResponse(google_auth_url)
 
+"""
+This route is used to handle the callback from Google OAuth2.
+It is used to get the user's email and password from Google.
+The frontend will redirect the user to this route when the user is logged in.
+"""
 @app.get("/auth/callback")
 def auth_callback(request: Request, response: Response, code: Optional[str] = None):
     if not code:
@@ -63,14 +76,26 @@ def auth_callback(request: Request, response: Response, code: Optional[str] = No
     user_email = id_info["email"]
 
     resp = RedirectResponse(url=f"http://localhost:3000/signin/callback?id_token={id_token}")    
-    resp.set_cookie(key="user_email", value=user_email, httponly=True, secure=True)
+    resp.set_cookie(
+        key="user_email",
+        value=user_email,
+        httponly=True,
+        secure=False,     
+        samesite="lax"   
+    )
     return resp
 
+"""
+This function is used to get the current user from the cookie.
+Converts Cookie => email
+"""
 def get_current_user(user_email: str = Cookie(None)):
     if not user_email:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user_email
-
+"""
+This route is used to upload an image to the database.
+"""
 @app.post("/upload")
 async def create_upload_file(file: UploadFile = File(...), description: str = Form(...), user_email: str = Depends(get_current_user)):
     content = await file.read()
@@ -80,8 +105,11 @@ async def create_upload_file(file: UploadFile = File(...), description: str = Fo
     insert_image_embedding(file.filename, url, embedding, description, user_email)
     return {"filename": file.filename, "size_mb": round(size_mb, 2)}
 
+"""
+This route is used to query an image to the database.
+"""
 @app.post("/search")
-async def query(file: UploadFile = File(...), user_email: str = Depends(get_current_user)):
+async def query(file: UploadFile = File(...), user_email: str = Form(...)):
     content = await file.read()
     embedding = create_embedding(content)
     results = search_image(embedding, user_email=user_email)

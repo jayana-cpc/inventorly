@@ -1,5 +1,7 @@
 import psycopg2
+from psycopg2.errors import UniqueViolation
 import os
+from fastapi import HTTPException
 import io
 from dotenv import load_dotenv
 from PIL import Image
@@ -37,9 +39,12 @@ def insert_image_embedding(image_name, image_url, embedding, description, user_e
             (image_name, image_url, embedding, description, user_email)
         )
         conn.commit()
+    except UniqueViolation:
+        conn.rollback()
+        raise HTTPException(status_code=409, detail="Image with this URL already exists.")
     except Exception as e:
-        print("Error inserting image embedding:", e, flush=True)
-        raise
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Internal server error")
     finally:
         cur.close()
         conn.close()
@@ -88,7 +93,7 @@ def search_image(embedding, top_k=1, user_email=None):
             {
                 "id": row[0],
                 "filename": row[1],
-                "file_path": row[2],
+                "image_url": row[2],
                 "created_at": row[4]
             }
             for row in rows
